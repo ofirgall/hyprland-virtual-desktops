@@ -1,5 +1,6 @@
 #include "VirtualDeskManager.hpp"
 #include "globals.hpp"
+#include "pinned_windows.hpp"
 #include <hyprland/src/Compositor.hpp>
 #include <format>
 #include <ranges>
@@ -93,6 +94,9 @@ void VirtualDeskManager::applyCurrentVDesk() {
     }
     if (currentMonitor && focusedWorkspace)
         currentMonitor->changeWorkspace(focusedWorkspace, false);
+
+    // Move pinned windows to the current virtual desk
+    PinnedWindows::movePinnedWindowsToActiveDesk(m_activeDeskKey, layout);
 
     g_pEventManager->postEvent(SHyprIPCEvent{VDESKCHANGE_EVENT_STR, std::to_string(m_activeDeskKey)});
 }

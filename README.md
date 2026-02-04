@@ -19,6 +19,7 @@ Feel free to join our [matrix room](https://matrix.to/#/#hypr-virtual-desktops:m
   - [How does this work?](#how-does-this-work)
     - [It's just workspaces, really](#its-just-workspaces-really)
     - [Hyprctl dispatchers](#hyprctl-dispatchers)
+      - [Pin Window](#pin-window)
       - [Mix with Hyprland native workspaces](#mix-with-hyprland-native-workspaces)
     - [Hyprctl commands](#hyprctl-commands)
     - [Hyprland keywords](#hyprland-keywords)
@@ -90,6 +91,9 @@ This plugin exposes a few hyprctl dispatchers:
 | nextdesk                                  | go to next vdesk. Creates it if it doesn't exist                                                                         | `none`                               | `nextdesk`                                            |
 | backcyclevdesks                           | backward cycle between currently existing vdesks. Goes back to vdesk with max id when at vdesk 1                         | `none`                               | `backcyclevdesks`                                     |
 | cyclevdesks                               | cycle between currently existing vdesks. Goes back to vdesk 1 if next vdesk does not exist                               | `none`                               | `cyclevdesks`                                         |
+| pinwindow (window)                        | Pin a window so it follows you across virtual desktops                                                                   | optional window, see below           | `pinwindow` or `pinwindow title:kitty`                |
+| unpinwindow (window)                      | Unpin a previously pinned window                                                                                         | optional window, see below           | `unpinwindow` or `unpinwindow title:kitty`            |
+| togglepinwindow (window)                  | Toggle the pinned state of a window                                                                                      | optional window, see below           | `togglepinwindow` or `togglepinwindow title:kitty`    |
 
 > BREAKING v2.1.0: `prevdesk` dispatcher was renamed to `lastdesk`. `prevdesk` has a new functionality: it goes to the previous desk. If you were using `prevdesk`, please update your config.
 
@@ -104,6 +108,25 @@ plugin will remember this association even if Hyprland kills the related workspa
 
 The `movetodesk` and `movetodesksilent` dispatchers work similarly to
 Hyprland's `movetoworkspace` and `movetoworkspacesilent` dispatchers. See [Hyprland's wiki](https://wiki.hyprland.org/Configuring/Dispatchers/#list-of-dispatchers). Of course, make sure to use the `vdesk` syntax above instead of Hyprland's.
+
+#### Pin Window
+
+The `pinwindow`, `unpinwindow`, and `togglepinwindow` dispatchers allow you to "pin" windows so they follow you across virtual desktops. A pinned window will automatically move to your current virtual desktop when you switch desks, while staying on its original monitor.
+
+This is useful for windows you always want visible, such as:
+- Music players
+- System monitors
+- Chat applications
+- Picture-in-picture video windows
+
+If no window argument is provided, the currently focused window is used. You can also specify a window using Hyprland's window regex syntax (e.g., `title:kitty`, `class:^(firefox)$`).
+
+**Example keybinds:**
+
+```ini
+bind = $mainMod, P, togglepinwindow,
+bind = $mainMod SHIFT, P, pinwindow, title:spotify
+```
 
 #### Mix with Hyprland native workspaces
 

@@ -44,6 +44,10 @@ const std::string REMEMBER_NONE     = "none";
 const std::string REMEMBER_SIZE     = "size";
 const std::string REMEMBER_MONITORS = "monitors";
 
+const std::string PINWINDOW_DISPATCH_STR       = "pinwindow";
+const std::string UNPINWINDOW_DISPATCH_STR     = "unpinwindow";
+const std::string TOGGLEPINWINDOW_DISPATCH_STR = "togglepinwindow";
+
 const std::string VDESKCHANGE_EVENT_STR = "vdesk";
 
 enum RememberLayoutConf {

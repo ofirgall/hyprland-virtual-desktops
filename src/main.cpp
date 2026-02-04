@@ -8,6 +8,7 @@
 #include "VirtualDeskManager.hpp"
 #include "utils.hpp"
 #include "sticky_apps.hpp"
+#include "pinned_windows.hpp"
 
 #include <any>
 #include <vector>
@@ -318,6 +319,36 @@ SDispatchResult resetVDeskDispatch(std::string arg) {
     return SDispatchResult{};
 }
 
+SDispatchResult pinWindowDispatch(std::string arg) {
+    auto window = PinnedWindows::getWindowFromArg(arg);
+    if (!window) {
+        printLog("No window found to pin", Log::WARN);
+        return SDispatchResult{};
+    }
+    PinnedWindows::pinWindow(window);
+    return SDispatchResult{};
+}
+
+SDispatchResult unpinWindowDispatch(std::string arg) {
+    auto window = PinnedWindows::getWindowFromArg(arg);
+    if (!window) {
+        printLog("No window found to unpin", Log::WARN);
+        return SDispatchResult{};
+    }
+    PinnedWindows::unpinWindow(window);
+    return SDispatchResult{};
+}
+
+SDispatchResult togglePinWindowDispatch(std::string arg) {
+    auto window = PinnedWindows::getWindowFromArg(arg);
+    if (!window) {
+        printLog("No window found to toggle pin", Log::WARN);
+        return SDispatchResult{};
+    }
+    PinnedWindows::togglePinWindow(window);
+    return SDispatchResult{};
+}
+
 void onWorkspaceChange(void*, SCallbackInfo&, std::any val) {
     if (monitorLayoutChanging)
         return;
@@ -468,6 +499,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addDispatcherV2(PHANDLE, MOVETONEXTDESKSILENT_DISPATCH_STR, moveToNextDeskSilentDispatch);
 
     HyprlandAPI::addDispatcherV2(PHANDLE, RESET_VDESK_DISPATCH_STR, resetVDeskDispatch);
+
+    HyprlandAPI::addDispatcherV2(PHANDLE, PINWINDOW_DISPATCH_STR, pinWindowDispatch);
+    HyprlandAPI::addDispatcherV2(PHANDLE, UNPINWINDOW_DISPATCH_STR, unpinWindowDispatch);
+    HyprlandAPI::addDispatcherV2(PHANDLE, TOGGLEPINWINDOW_DISPATCH_STR, togglePinWindowDispatch);
 
     // Configs
     HyprlandAPI::addConfigValue(PHANDLE, VIRTUALDESK_NAMES_CONF, Hyprlang::STRING{"unset"});
