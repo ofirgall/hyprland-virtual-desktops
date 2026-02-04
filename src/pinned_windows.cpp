@@ -1,6 +1,9 @@
 #include "pinned_windows.hpp"
+#include "globals.hpp"
 #include "utils.hpp"
+#include <algorithm>
 #include <format>
+#include <ranges>
 #include <hyprland/src/desktop/state/FocusState.hpp>
 
 namespace PinnedWindows {
@@ -70,7 +73,7 @@ namespace PinnedWindows {
             printLog(std::format("Moving {} pinned windows to vdesk {}", pinnedWindows.size(), targetVdeskId));
 
         for (const auto& window : pinnedWindows) {
-            if (!window || !g_pCompositor->windowExists(window))
+            if (!window || std::ranges::find(g_pCompositor->m_windows, window) == g_pCompositor->m_windows.end())
                 continue;
 
             // Get the monitor the window is currently on
@@ -111,14 +114,14 @@ namespace PinnedWindows {
 
     void cleanupInvalidWindows() {
         std::erase_if(pinnedWindows, [](const PHLWINDOW& window) {
-            return !window || !g_pCompositor->windowExists(window);
+            return !window || std::ranges::find(g_pCompositor->m_windows, window) == g_pCompositor->m_windows.end();
         });
     }
 
     PHLWINDOW getWindowFromArg(const std::string& arg) {
         if (arg.empty()) {
             // Return the focused window
-            return g_pCompositor->m_lastWindow.lock();
+            return Desktop::focusState()->window();
         }
         // Get window by regex
         return g_pCompositor->getWindowByRegex(arg);
