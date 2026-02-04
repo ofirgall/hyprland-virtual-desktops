@@ -2,7 +2,7 @@
 # make sure that the path above is to the root hl repo directory, NOT src/
 # and that you have ran `make protocols` in the hl dir.
 
-.PHONY: all debug clean
+.PHONY: all debug clean install
 
 BUILD_DIR = build
 
@@ -20,3 +20,6 @@ debug:
 
 clean:
 	rm -rf $(BUILD_DIR) virtual-desktops.so
+
+install:
+	hyprctl plugin load $(CURDIR)/virtual-desktops.so
