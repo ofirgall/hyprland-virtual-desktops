@@ -210,14 +210,14 @@ std::string printStateDispatch(eHyprCtlOutputFormat format, std::string arg) {
                     first = false;
                 workspaces += std::format("{}", workspaceId);
             }
-            out += std::format("- {}: {}\n  Focused: {}\n  Populated: {}\n  Workspaces: {}\n  Windows: {}\n\n", desk->name, desk->id, manager->activeVdesk().get() == desk.get(),
-                               windows > 0, workspaces, windows);
+            out += std::format("- {}: {}\n  Focused: {}\n  Populated: {}\n  Workspaces: {}\n  Windows: {}\n  Status: {}\n\n", desk->name, desk->id, manager->activeVdesk().get() == desk.get(),
+                               windows > 0, workspaces, windows, desk->status);
             entries++;
         }
         for (const auto& [vdeskId, name] : manager->vdeskNamesMap) {
             if (manager->vdesksMap.contains(vdeskId))
                 continue;
-            out += std::format("- {}: {}\n  Focused: false\n  Populated: false\n  Workspaces: \n  Windows: 0\n\n", name, vdeskId);
+            out += std::format("- {}: {}\n  Focused: false\n  Populated: false\n  Workspaces: \n  Windows: 0\n  Status: \n\n", name, vdeskId);
             entries++;
         }
 
@@ -248,9 +248,10 @@ std::string printStateDispatch(eHyprCtlOutputFormat format, std::string arg) {
     "focused": {},
     "populated": {},
     "workspaces": [{}],
-    "windows": {}
+    "windows": {},
+    "status": "{}"
 }},)#",
-                vdeskId, desk->name, manager->activeVdesk().get() == desk.get(), windows > 0, workspaces, windows);
+                vdeskId, desk->name, manager->activeVdesk().get() == desk.get(), windows > 0, workspaces, windows, desk->status);
             entries++;
         }
         for (const auto& [vdeskId, name] : manager->vdeskNamesMap) {
@@ -263,7 +264,8 @@ std::string printStateDispatch(eHyprCtlOutputFormat format, std::string arg) {
     "focused": false,
     "populated": false,
     "workspaces": [],
-    "windows": 0
+    "windows": 0,
+    "status": ""
 }},)#",
                 vdeskId, name);
             entries++;
@@ -304,6 +306,26 @@ std::string printLayoutDispatch(eHyprCtlOutputFormat format, std::string arg) {
         out += "]\n}";
     }
     return out;
+}
+
+SDispatchResult setStatusDispatch(std::string arg) {
+    manager->activeVdesk()->status = arg;
+    printLog(std::format("Status set to: {} on vdesk {}", arg, manager->activeVdesk()->id));
+    return SDispatchResult{};
+}
+
+std::string getStatusDispatch(eHyprCtlOutputFormat format, std::string arg) {
+    auto vdesk = manager->activeVdesk();
+    if (format == eHyprCtlOutputFormat::FORMAT_NORMAL) {
+        return vdesk->status;
+    } else if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
+        return std::format(R"#({{
+    "vdesk_id": {},
+    "status": "{}"
+}})#",
+                           vdesk->id, vdesk->status);
+    }
+    return "";
 }
 
 SDispatchResult resetVDeskDispatch(std::string arg) {
@@ -461,6 +483,14 @@ void registerHyprctlCommands() {
     ptr       = HyprlandAPI::registerHyprCtlCommand(PHANDLE, cmd);
     if (!ptr)
         printLog(std::format("Failed to register hyprctl command: {}", PRINTDESK_DISPATCH_STR));
+
+    // Register getstatus
+    cmd.name  = GETSTATUS_DISPATCH_STR;
+    cmd.fn    = getStatusDispatch;
+    cmd.exact = true;
+    ptr       = HyprlandAPI::registerHyprCtlCommand(PHANDLE, cmd);
+    if (!ptr)
+        printLog(std::format("Failed to register hyprctl command: {}", GETSTATUS_DISPATCH_STR));
 }
 
 // Do NOT change this function.
@@ -499,6 +529,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addDispatcherV2(PHANDLE, MOVETONEXTDESKSILENT_DISPATCH_STR, moveToNextDeskSilentDispatch);
 
     HyprlandAPI::addDispatcherV2(PHANDLE, RESET_VDESK_DISPATCH_STR, resetVDeskDispatch);
+
+    HyprlandAPI::addDispatcherV2(PHANDLE, SETSTATUS_DISPATCH_STR, setStatusDispatch);
 
     HyprlandAPI::addDispatcherV2(PHANDLE, PINWINDOW_DISPATCH_STR, pinWindowDispatch);
     HyprlandAPI::addDispatcherV2(PHANDLE, UNPINWINDOW_DISPATCH_STR, unpinWindowDispatch);

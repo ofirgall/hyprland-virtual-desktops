@@ -38,6 +38,7 @@ class VirtualDesk {
     VirtualDesk(int id = 1, std::string name = "1");
     int                             id;
     std::string                     name;
+    std::string                     status;
     std::vector<Layout>             layouts;
 
     const Layout&                   activeLayout(const RememberLayoutConf&, const CSharedPointer<CMonitor>& exclude = nullptr);

@@ -22,4 +22,5 @@ clean:
 	rm -rf $(BUILD_DIR) virtual-desktops.so
 
 install:
+	hyprctl plugin unload $(CURDIR)/virtual-desktops.so
 	hyprctl plugin load $(CURDIR)/virtual-desktops.so
