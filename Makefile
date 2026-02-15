@@ -23,4 +23,5 @@ clean:
 
 install:
 	hyprctl plugin unload $(CURDIR)/virtual-desktops.so
+	sleep 2
 	hyprctl plugin load $(CURDIR)/virtual-desktops.so
