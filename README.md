@@ -94,6 +94,7 @@ This plugin exposes a few hyprctl dispatchers:
 | pinwindow (window)                        | Pin a window so it follows you across virtual desktops                                                                   | optional window, see below           | `pinwindow` or `pinwindow title:kitty`                |
 | unpinwindow (window)                      | Unpin a previously pinned window                                                                                         | optional window, see below           | `unpinwindow` or `unpinwindow title:kitty`            |
 | togglepinwindow (window)                  | Toggle the pinned state of a window                                                                                      | optional window, see below           | `togglepinwindow` or `togglepinwindow title:kitty`    |
+| vdesksetstatus (vdesk,)status             | Set a custom status string on the active or specified vdesk                                                               | optional vdesk + status string       | `vdesksetstatus busy` or `vdesksetstatus 2,busy`      |
 
 > BREAKING v2.1.0: `prevdesk` dispatcher was renamed to `lastdesk`. `prevdesk` has a new functionality: it goes to the previous desk. If you were using `prevdesk`, please update your config.
 
@@ -155,6 +156,7 @@ Since version 2.2, this plugin exposes a couple of `hyprctl` commands. That is, 
 | printdesk (vdesk) | Prints to Hyprland log the specified vdesk or the currently active vdesk\* (if no argument is given) | optional vdesk, see [above](#hyprctl-dispatchers) | `hyprctl printdesk` or `hyprctl printdesk 2` or `hyprctl printdesk coding` |
 | printstate        | Prints state of all vdesks                                                                           | `none`                                            | `hyprctl printstate`                                                       |
 | printlayout       | print to Hyprland logs the current layout                                                            | `none`                                            | `hyprctl printlayout`                                                      |
+| vdeskgetstatus (vdesk) | Returns the status string of the active or specified vdesk                                      | optional vdesk, see [above](#hyprctl-dispatchers) | `hyprctl vdeskgetstatus` or `hyprctl vdeskgetstatus 2`                     |
 
 ### Hyprland IPC events
 

@@ -309,13 +309,59 @@ std::string printLayoutDispatch(eHyprCtlOutputFormat format, std::string arg) {
 }
 
 SDispatchResult setStatusDispatch(std::string arg) {
-    manager->activeVdesk()->status = arg;
-    printLog(std::format("Status set to: {} on vdesk {}", arg, manager->activeVdesk()->id));
+    std::shared_ptr<VirtualDesk> vdesk;
+    std::string                  status;
+    auto                         commaPos = arg.find(',');
+    if (commaPos != std::string::npos) {
+        std::string vdeskArg = trim(arg.substr(0, commaPos));
+        status               = arg.substr(commaPos + 1);
+        try {
+            int vdeskId = std::stoi(vdeskArg);
+            if (manager->vdesksMap.contains(vdeskId)) {
+                vdesk = manager->vdesksMap[vdeskId];
+            } else {
+                printLog(std::format("vdesk {} not found", vdeskId), Log::WARN);
+                return SDispatchResult{};
+            }
+        } catch (std::exception const& ex) {
+            int vdeskId = manager->getDeskIdFromName(vdeskArg, false);
+            if (vdeskId < 0) {
+                printLog(std::format("vdesk '{}' not found", vdeskArg), Log::WARN);
+                return SDispatchResult{};
+            }
+            vdesk = manager->vdesksMap[vdeskId];
+        }
+    } else {
+        vdesk  = manager->activeVdesk();
+        status = arg;
+    }
+    vdesk->status = status;
+    printLog(std::format("Status set to: {} on vdesk {}", status, vdesk->id));
     return SDispatchResult{};
 }
 
 std::string getStatusDispatch(eHyprCtlOutputFormat format, std::string arg) {
-    auto vdesk = manager->activeVdesk();
+    arg.erase(0, GETSTATUS_DISPATCH_STR.length());
+    std::shared_ptr<VirtualDesk> vdesk;
+    if (arg.length() > 0) {
+        arg = trim(arg);
+        try {
+            int vdeskId = std::stoi(arg);
+            if (manager->vdesksMap.contains(vdeskId)) {
+                vdesk = manager->vdesksMap[vdeskId];
+            } else {
+                return format == eHyprCtlOutputFormat::FORMAT_NORMAL ? "vdesk not found" : R"#({"error": "vdesk not found"})#";
+            }
+        } catch (std::exception const& ex) {
+            int vdeskId = manager->getDeskIdFromName(arg, false);
+            if (vdeskId < 0)
+                return format == eHyprCtlOutputFormat::FORMAT_NORMAL ? "vdesk not found" : R"#({"error": "vdesk not found"})#";
+            vdesk = manager->vdesksMap[vdeskId];
+        }
+    } else {
+        vdesk = manager->activeVdesk();
+    }
+
     if (format == eHyprCtlOutputFormat::FORMAT_NORMAL) {
         return vdesk->status;
     } else if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
@@ -487,7 +533,7 @@ void registerHyprctlCommands() {
     // Register getstatus
     cmd.name  = GETSTATUS_DISPATCH_STR;
     cmd.fn    = getStatusDispatch;
-    cmd.exact = true;
+    cmd.exact = false;
     ptr       = HyprlandAPI::registerHyprCtlCommand(PHANDLE, cmd);
     if (!ptr)
         printLog(std::format("Failed to register hyprctl command: {}", GETSTATUS_DISPATCH_STR));
