@@ -22,6 +22,7 @@ clean:
 	rm -rf $(BUILD_DIR) virtual-desktops.so
 
 install:
+	hyprpm disable virtual-desktops
 	hyprctl plugin unload $(CURDIR)/virtual-desktops.so
 	sleep 2
 	hyprctl plugin load $(CURDIR)/virtual-desktops.so
