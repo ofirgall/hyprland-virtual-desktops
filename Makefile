@@ -26,3 +26,15 @@ install:
 	hyprctl plugin unload $(CURDIR)/virtual-desktops.so
 	sleep 2
 	hyprctl plugin load $(CURDIR)/virtual-desktops.so
+
+release:
+	hyprctl plugin unload $(CURDIR)/virtual-desktops.so # Unload debug plugin
+
+	# Reinstall plugin from git
+	git push
+	hyprpm purge-cache
+	hyprpm update
+	hyprpm -v add https://github.com/ofirgall/hyprland-virtual-desktops
+	hyprpm enable virtual-desktops
+
+	hyprpm reload -n # Reload the plugins
