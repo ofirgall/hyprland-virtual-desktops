@@ -102,8 +102,9 @@ namespace PinnedWindows {
                 continue;
 
             // Move the window to the target workspace silently
-            auto windowPidFmt = std::format("pid:{}", window->getPID());
-            std::string moveCmd = std::to_string(targetWorkspaceId) + "," + windowPidFmt;
+            // Use address instead of PID because browsers share PIDs across windows
+            auto windowAddrFmt = std::format("address:0x{:x}", (uintptr_t)window.get());
+            std::string moveCmd = std::to_string(targetWorkspaceId) + "," + windowAddrFmt;
             
             if (isVerbose())
                 printLog(std::format("Moving pinned window '{}' to workspace {}", window->m_title, targetWorkspaceId));
