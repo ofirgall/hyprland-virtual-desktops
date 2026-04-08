@@ -38,3 +38,7 @@ release:
 	hyprpm enable virtual-desktops
 
 	hyprpm reload -n # Reload the plugins
+
+unload:
+	hyprctl plugin unload $(CURDIR)/virtual-desktops.so # Unload debug plugin
+	hyprpm disable virtual-desktops

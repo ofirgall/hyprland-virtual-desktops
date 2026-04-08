@@ -427,6 +427,20 @@ void onWorkspaceChange(void*, SCallbackInfo&, std::any val) {
     if (!monitor || !monitor->m_enabled)
         return;
 
+    // Check if this workspace belongs to another vdesk (e.g., focus moved
+    // because a link opened in a browser on a different vdesk).  If so,
+    // switch to that vdesk instead of clobbering the current one.
+    if (!manager->activeVdesk()->isWorkspaceOnActiveLayout(workspaceID)) {
+        for (const auto& [vdeskId, vdesk] : manager->vdesksMap) {
+            if (vdesk->id != manager->activeVdesk()->id && vdesk->isWorkspaceOnActiveLayout(workspaceID)) {
+                if (isVerbose())
+                    printLog("workspace " + std::to_string(workspaceID) + " belongs to vdesk " + std::to_string(vdeskId) + ", switching");
+                manager->changeActiveDesk(vdeskId, false);
+                return;
+            }
+        }
+    }
+
     manager->activeVdesk()->changeWorkspaceOnMonitor(workspaceID, monitor);
     if (isVerbose()) {
         auto vdesk = manager->activeVdesk();

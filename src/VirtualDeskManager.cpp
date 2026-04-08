@@ -36,6 +36,8 @@ void VirtualDeskManager::changeActiveDesk(int vdeskId, bool apply) {
     m_activeDeskKey = vdeskId;
     if (apply)
         applyCurrentVDesk();
+    else
+        g_pEventManager->postEvent(SHyprIPCEvent{VDESKCHANGE_EVENT_STR, std::to_string(m_activeDeskKey)});
 }
 
 void VirtualDeskManager::lastVisitedDesk() {
