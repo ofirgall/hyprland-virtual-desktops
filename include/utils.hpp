@@ -50,6 +50,7 @@ const std::string GETSTATUS_DISPATCH_STR = "vdeskgetstatus";
 const std::string PINWINDOW_DISPATCH_STR       = "pinwindow";
 const std::string UNPINWINDOW_DISPATCH_STR     = "unpinwindow";
 const std::string TOGGLEPINWINDOW_DISPATCH_STR = "togglepinwindow";
+const std::string PRINTPINNEDWINDOWS_DISPATCH_STR = "printpinnedwindows";
 
 const std::string VDESKCHANGE_EVENT_STR = "vdesk";
 

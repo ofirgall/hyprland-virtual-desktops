@@ -157,6 +157,7 @@ Since version 2.2, this plugin exposes a couple of `hyprctl` commands. That is, 
 | printstate        | Prints state of all vdesks                                                                           | `none`                                            | `hyprctl printstate`                                                       |
 | printlayout       | print to Hyprland logs the current layout                                                            | `none`                                            | `hyprctl printlayout`                                                      |
 | vdeskgetstatus (vdesk) | Returns the status string of the active or specified vdesk                                      | optional vdesk, see [above](#hyprctl-dispatchers) | `hyprctl vdeskgetstatus` or `hyprctl vdeskgetstatus 2`                     |
+| printpinnedwindows     | Lists all pinned windows (address, class, title). Supports JSON with `-j`                       | `none`                                            | `hyprctl printpinnedwindows` or `hyprctl -j printpinnedwindows`            |
 
 ### Hyprland IPC events
 

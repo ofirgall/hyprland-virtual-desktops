@@ -517,6 +517,42 @@ void onConfigReloaded(void*, SCallbackInfo&, std::any val) {
     manager->loadLayoutConf();
 }
 
+std::string printPinnedWindowsDispatch(eHyprCtlOutputFormat format, std::string arg) {
+    PinnedWindows::cleanupInvalidWindows();
+    const auto& pinned = PinnedWindows::pinnedWindows;
+
+    if (format == eHyprCtlOutputFormat::FORMAT_NORMAL) {
+        if (pinned.empty())
+            return "No pinned windows";
+        std::string result;
+        for (const auto& window : pinned) {
+            if (!window)
+                continue;
+            result += std::format("Window {:x} ({}): {}\n", (uintptr_t)window.get(), window->m_class, window->m_title);
+        }
+        return result;
+    } else if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
+        std::string json = "[";
+        bool        first = true;
+        for (const auto& window : pinned) {
+            if (!window)
+                continue;
+            if (!first)
+                json += ",";
+            json += std::format(R"#({{
+    "address": "0x{:x}",
+    "class": "{}",
+    "title": "{}"
+}})#",
+                                (uintptr_t)window.get(), window->m_class, window->m_title);
+            first = false;
+        }
+        json += "]";
+        return json;
+    }
+    return "";
+}
+
 void registerHyprctlCommands() {
     SHyprCtlCommand cmd;
 
@@ -551,6 +587,14 @@ void registerHyprctlCommands() {
     ptr       = HyprlandAPI::registerHyprCtlCommand(PHANDLE, cmd);
     if (!ptr)
         printLog(std::format("Failed to register hyprctl command: {}", GETSTATUS_DISPATCH_STR));
+
+    // Register printpinnedwindows
+    cmd.name  = PRINTPINNEDWINDOWS_DISPATCH_STR;
+    cmd.fn    = printPinnedWindowsDispatch;
+    cmd.exact = true;
+    ptr       = HyprlandAPI::registerHyprCtlCommand(PHANDLE, cmd);
+    if (!ptr)
+        printLog(std::format("Failed to register hyprctl command: {}", PRINTPINNEDWINDOWS_DISPATCH_STR));
 }
 
 // Do NOT change this function.
