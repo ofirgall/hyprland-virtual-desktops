@@ -1,0 +1,28 @@
+[project]
+name = "vdesk-collapser"
+version = "0.1.0"
+description = "Per-monitor-count window layout daemon for hyprland-virtual-desktops"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+vdesk-collapser = "vdesk_collapser.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vdesk_collapser*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
