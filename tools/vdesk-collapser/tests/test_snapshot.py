@@ -67,3 +67,79 @@ def test_write_snapshot_is_atomic(tmp_state_dir: Path):
 
 def test_read_snapshot_missing_returns_none(tmp_state_dir: Path):
     assert read_snapshot(snapshot_path(tmp_state_dir, 7)) is None
+
+from vdesk_collapser.snapshot import replay_snapshot
+from vdesk_collapser.models import Snapshot, WindowState, WindowKey
+
+def _client(addr, klass, title, pid, ws_id, monitor=0):
+    return {
+        "address": addr, "class": klass, "initialTitle": title, "title": title,
+        "pid": pid, "workspace": {"id": ws_id}, "monitor": monitor,
+        "floating": False, "at": [0, 0], "size": [800, 600],
+    }
+
+def _ws(key_class="Slack", key_title="Slack", key_pid=4711, addr="0x1",
+        vdesk=1, monitor="DP-1", workspace_id=1, pinned=False,
+        floating=False, at=(0, 0), size=(800, 600)):
+    return WindowState(
+        key=WindowKey(key_class, key_title, key_pid),
+        address=addr, vdesk=vdesk, monitor=monitor, workspace_id=workspace_id,
+        pinned=pinned, floating=floating, at=at, size=size,
+    )
+
+def test_replay_moves_window_back_to_snapshot_vdesk():
+    snap = Snapshot(monitor_count=3, taken_at="t", windows=[_ws(vdesk=2)])
+    driver = FakeDriver(
+        clients=[_client("0x1", "Slack", "Slack", 4711, ws_id=5)],
+        pinned=set(),
+        workspace_to_vdesk={5: 1},
+    )
+    replay_snapshot(driver, snap, skip_addresses=set())
+    assert driver.calls == [("movetodesksilent", "2,address:0x1")]
+
+def test_replay_finds_window_by_key_when_address_differs():
+    snap = Snapshot(monitor_count=3, taken_at="t", windows=[_ws(addr="0x99", vdesk=2)])
+    driver = FakeDriver(
+        clients=[_client("0x1", "Slack", "Slack", 4711, ws_id=5)],
+        pinned=set(),
+        workspace_to_vdesk={5: 1},
+    )
+    replay_snapshot(driver, snap, skip_addresses=set())
+    assert ("movetodesksilent", "2,address:0x1") in driver.calls
+
+def test_replay_skips_addresses_already_touched_by_rules():
+    snap = Snapshot(monitor_count=3, taken_at="t", windows=[_ws(vdesk=2)])
+    driver = FakeDriver(
+        clients=[_client("0x1", "Slack", "Slack", 4711, ws_id=5)],
+        pinned=set(),
+        workspace_to_vdesk={5: 1},
+    )
+    replay_snapshot(driver, snap, skip_addresses={"0x1"})
+    assert driver.calls == []
+
+def test_replay_skips_missing_windows_silently():
+    snap = Snapshot(monitor_count=3, taken_at="t", windows=[_ws(addr="0xZ", vdesk=2)])
+    driver = FakeDriver(clients=[], pinned=set(), workspace_to_vdesk={})
+    replay_snapshot(driver, snap, skip_addresses=set())
+    assert driver.calls == []
+
+def test_replay_unpins_then_pins_to_match_snapshot():
+    snap = Snapshot(monitor_count=3, taken_at="t", windows=[_ws(vdesk=1, pinned=True)])
+    driver = FakeDriver(
+        clients=[_client("0x1", "Slack", "Slack", 4711, ws_id=1)],
+        pinned=set(),
+        workspace_to_vdesk={1: 1},
+    )
+    replay_snapshot(driver, snap, skip_addresses=set())
+    assert ("pinwindow", "address:0x1") in driver.calls
+    assert not any(c[0] == "movetodesksilent" for c in driver.calls)
+
+def test_replay_unpins_when_snapshot_says_unpinned_but_currently_pinned():
+    snap = Snapshot(monitor_count=3, taken_at="t", windows=[_ws(vdesk=1, pinned=False)])
+    driver = FakeDriver(
+        clients=[_client("0x1", "Slack", "Slack", 4711, ws_id=1)],
+        pinned={"0x1"},
+        workspace_to_vdesk={1: 1},
+    )
+    replay_snapshot(driver, snap, skip_addresses=set())
+    assert driver.calls == [("unpinwindow", "address:0x1")]
