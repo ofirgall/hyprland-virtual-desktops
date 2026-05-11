@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from vdesk_collapser.driver import FakeDriver
 from vdesk_collapser.models import Config, Matcher, Rule
