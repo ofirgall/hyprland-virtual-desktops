@@ -2,7 +2,7 @@ from vdesk_collapser.models import WindowKey, WindowState, Snapshot, Matcher, Ru
 
 def test_window_key_is_hashable_and_frozen():
     k = WindowKey(klass="Slack", initial_title="Slack", pid=4711)
-    {k}  # must be hashable
+    assert {k} == {WindowKey("Slack", "Slack", 4711)}
     # frozen
     import dataclasses
     assert dataclasses.fields(WindowKey)
