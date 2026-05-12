@@ -56,12 +56,15 @@ def main(argv: list[str] | None = None) -> int:
     driver: Driver = HyprctlDriver(dry_run=args.dry_run)
 
     if args.once:
-        if args.simulate is not None:
-            run_once_with_simulated_count(driver, cfg, args.simulate, state_dir)
-        else:
-            current = len(driver.monitors())
-            run_once_with_simulated_count(driver, cfg, current, state_dir)
+        if args.simulate is None:
+            print("--once requires --simulate N", file=sys.stderr)
+            return 2
+        run_once_with_simulated_count(driver, cfg, args.simulate, state_dir)
         return 0
+
+    if args.simulate is not None:
+        print("--simulate only applies with --once", file=sys.stderr)
+        return 2
 
     asyncio.run(run_daemon(Path(args.config), driver=driver))
     return 0

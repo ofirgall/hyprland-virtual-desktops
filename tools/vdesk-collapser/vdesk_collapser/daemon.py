@@ -56,4 +56,14 @@ async def run_daemon(config_path: Path, driver: Driver | None = None) -> None:
     def on_monitor_event() -> None:
         debouncer.bump(len(drv.monitors()))
 
-    await _read_events(_socket_path(), on_monitor_event)
+    backoff = 1.0
+    while True:
+        try:
+            await _read_events(_socket_path(), on_monitor_event)
+            log.warning("socket2 stream ended; reconnecting")
+        except (FileNotFoundError, ConnectionRefusedError, OSError) as e:
+            log.warning("socket2 connection error (%s); retrying in %.1fs", e, backoff)
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, 30.0)
+            continue
+        backoff = 1.0
