@@ -2,7 +2,7 @@
 # make sure that the path above is to the root hl repo directory, NOT src/
 # and that you have ran `make protocols` in the hl dir.
 
-.PHONY: all debug clean install
+.PHONY: all debug clean install install-collapser
 
 BUILD_DIR = build
 
@@ -38,6 +38,9 @@ release:
 	hyprpm enable virtual-desktops
 
 	hyprpm reload -n # Reload the plugins
+
+install-collapser:
+	uv tool install --force --editable tools/vdesk-collapser
 
 unload:
 	hyprctl plugin unload $(CURDIR)/virtual-desktops.so # Unload debug plugin

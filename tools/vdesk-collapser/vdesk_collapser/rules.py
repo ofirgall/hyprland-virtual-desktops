@@ -1,7 +1,10 @@
 from __future__ import annotations
+import logging
 import re
 from vdesk_collapser.driver import Driver
 from vdesk_collapser.models import Matcher, Rule
+
+log = logging.getLogger("vdesk-collapser")
 
 def match_window(client: dict, m: Matcher) -> bool:
     if m.klass is not None and client.get("class") != m.klass:
@@ -26,8 +29,8 @@ def apply_rules(driver: Driver, rules: list[Rule]) -> set[str]:
                 continue
             addr = c["address"]
             touched.add(addr)
+            log.debug("rule matched %s (class=%s)", addr, c.get("class", "?"))
 
-            # A: unpin first if rule wants unpinned and currently pinned
             if rule.pin is False and addr in pinned:
                 driver.dispatch("unpinwindow", f"address:{addr}")
                 pinned.discard(addr)

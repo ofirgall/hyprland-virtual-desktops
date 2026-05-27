@@ -1,8 +1,11 @@
 from __future__ import annotations
 import json
+import logging
 import re
 import subprocess
 from typing import Protocol
+
+log = logging.getLogger("vdesk-collapser")
 
 class Driver(Protocol):
     def clients(self) -> list[dict]: ...
@@ -16,8 +19,12 @@ class HyprctlDriver:
         self.dry_run = dry_run
 
     def _json(self, *args: str) -> list[dict] | dict:
-        out = subprocess.check_output(["hyprctl", "-j", *args], text=True)
-        return json.loads(out)
+        cmd = ["hyprctl", "-j", *args]
+        log.debug("exec: %s", " ".join(cmd))
+        out = subprocess.check_output(cmd, text=True)
+        data = json.loads(out)
+        log.debug("  -> %d items", len(data) if isinstance(data, list) else 1)
+        return data
 
     def clients(self) -> list[dict]:
         return self._json("clients")  # type: ignore[return-value]
@@ -26,18 +33,23 @@ class HyprctlDriver:
         return self._json("monitors")  # type: ignore[return-value]
 
     def pinned_addresses(self) -> set[str]:
-        # plugin command "printpinnedwindows" returns plain text, one address per line
-        out = subprocess.check_output(["hyprctl", "printpinnedwindows"], text=True)
+        cmd = ["hyprctl", "printpinnedwindows"]
+        log.debug("exec: %s", " ".join(cmd))
+        out = subprocess.check_output(cmd, text=True)
+        log.debug("  -> %r", out[:200])
         addrs: set[str] = set()
         for line in out.splitlines():
             line = line.strip()
             if line.startswith("0x"):
                 addrs.add(line.split()[0])
+        log.debug("  pinned: %s", addrs)
         return addrs
 
     def workspace_to_vdesk(self) -> dict[int, int]:
-        # plugin "printstate" returns lines like "vdesk 1: workspace 1 (monitor DP-1), ..."
-        out = subprocess.check_output(["hyprctl", "printstate"], text=True)
+        cmd = ["hyprctl", "printstate"]
+        log.debug("exec: %s", " ".join(cmd))
+        out = subprocess.check_output(cmd, text=True)
+        log.debug("  -> %r", out[:300])
         mapping: dict[int, int] = {}
         for line in out.splitlines():
             m = re.match(r"\s*vdesk\s+(\d+)\s*:", line)
@@ -46,13 +58,16 @@ class HyprctlDriver:
             vdesk = int(m.group(1))
             for ws in re.findall(r"workspace\s+(\d+)", line):
                 mapping[int(ws)] = vdesk
+        log.debug("  workspace_to_vdesk: %s", mapping)
         return mapping
 
     def dispatch(self, command: str, args: str) -> None:
         if self.dry_run:
-            print(f"[dry-run] hyprctl dispatch {command} {args}")
+            log.info("[dry-run] dispatch %s %s", command, args)
             return
-        subprocess.check_call(["hyprctl", "dispatch", command, args])
+        cmd = ["hyprctl", "dispatch", command, args]
+        log.debug("exec: %s", " ".join(cmd))
+        subprocess.check_call(cmd)
 
 
 class FakeDriver:

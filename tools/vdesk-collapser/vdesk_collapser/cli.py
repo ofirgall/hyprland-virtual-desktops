@@ -5,6 +5,7 @@ import datetime as dt
 import json
 import logging
 import os
+import subprocess
 import sys
 from pathlib import Path
 from vdesk_collapser.config import load_config
@@ -26,6 +27,8 @@ def _build_parser() -> argparse.ArgumentParser:
 def _now_iso() -> str:
     return dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
+log = logging.getLogger("vdesk-collapser")
+
 def run_once_with_simulated_count(
     driver: Driver, cfg: Config, simulated: int, state_dir: Path,
 ) -> None:
@@ -38,8 +41,7 @@ def run_once_with_simulated_count(
             current = None
     if current is None:
         current = len(driver.monitors())
-    if current == simulated:
-        return
+    log.info("current_profile=%d, simulated=%d", current, simulated)
     run_transition(driver, cfg, n_old=current, m_new=simulated,
                    state_dir=state_dir, now_iso=_now_iso())
 
@@ -49,16 +51,30 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+    try:
+        return _run(args)
+    except subprocess.CalledProcessError as e:
+        log.error("command failed: %s (exit %d)", e.cmd, e.returncode)
+        return 1
+    except Exception:
+        log.exception("unexpected error")
+        return 1
+
+def _run(args: argparse.Namespace) -> int:
+    log.debug("loading config from %s", args.config)
     cfg = load_config(Path(args.config))
+    log.debug("config loaded: debounce_ms=%d, profiles=%s", cfg.debounce_ms, list(cfg.profiles.keys()))
     state_dir = Path(os.path.expanduser(cfg.state_dir))
     state_dir.mkdir(parents=True, exist_ok=True)
     (state_dir / "snapshots").mkdir(exist_ok=True)
+    log.debug("state_dir=%s, dry_run=%s", state_dir, args.dry_run)
     driver: Driver = HyprctlDriver(dry_run=args.dry_run)
 
     if args.once:
         if args.simulate is None:
             print("--once requires --simulate N", file=sys.stderr)
             return 2
+        log.debug("--once mode, simulate=%d", args.simulate)
         run_once_with_simulated_count(driver, cfg, args.simulate, state_dir)
         return 0
 
