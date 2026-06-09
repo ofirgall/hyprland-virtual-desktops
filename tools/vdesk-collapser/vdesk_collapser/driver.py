@@ -37,11 +37,7 @@ class HyprctlDriver:
         log.debug("exec: %s", " ".join(cmd))
         out = subprocess.check_output(cmd, text=True)
         log.debug("  -> %r", out[:200])
-        addrs: set[str] = set()
-        for line in out.splitlines():
-            line = line.strip()
-            if line.startswith("0x"):
-                addrs.add(line.split()[0])
+        addrs = parse_pinned_windows(out)
         log.debug("  pinned: %s", addrs)
         return addrs
 
@@ -50,14 +46,7 @@ class HyprctlDriver:
         log.debug("exec: %s", " ".join(cmd))
         out = subprocess.check_output(cmd, text=True)
         log.debug("  -> %r", out[:300])
-        mapping: dict[int, int] = {}
-        for line in out.splitlines():
-            m = re.match(r"\s*vdesk\s+(\d+)\s*:", line)
-            if not m:
-                continue
-            vdesk = int(m.group(1))
-            for ws in re.findall(r"workspace\s+(\d+)", line):
-                mapping[int(ws)] = vdesk
+        mapping = parse_printstate(out)
         log.debug("  workspace_to_vdesk: %s", mapping)
         return mapping
 
@@ -68,6 +57,32 @@ class HyprctlDriver:
         cmd = ["hyprctl", "dispatch", command, args]
         log.debug("exec: %s", " ".join(cmd))
         subprocess.check_call(cmd)
+
+
+def parse_pinned_windows(out: str) -> set[str]:
+    addrs: set[str] = set()
+    for line in out.splitlines():
+        m = re.match(r"Window\s+([0-9a-fA-F]+)\s", line)
+        if m:
+            addrs.add("0x" + m.group(1))
+    return addrs
+
+
+def parse_printstate(out: str) -> dict[int, int]:
+    mapping: dict[int, int] = {}
+    current_vdesk: int | None = None
+    for line in out.splitlines():
+        vdesk_m = re.match(r"-\s+(\d+)[\s:]", line)
+        if vdesk_m:
+            current_vdesk = int(vdesk_m.group(1))
+            continue
+        ws_m = re.match(r"\s+Workspaces:\s*(.+)", line)
+        if ws_m and current_vdesk is not None:
+            for ws_str in ws_m.group(1).split(","):
+                ws_str = ws_str.strip()
+                if ws_str.isdigit():
+                    mapping[int(ws_str)] = current_vdesk
+    return mapping
 
 
 class FakeDriver:

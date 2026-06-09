@@ -22,6 +22,7 @@ def run_transition(
     m_new: int,
     state_dir: Path,
     now_iso: str,
+    dry_run: bool = False,
 ) -> None:
     state_dir.mkdir(parents=True, exist_ok=True)
     sfile = _state_file(state_dir)
@@ -29,12 +30,14 @@ def run_transition(
     with open(sfile, "r+") as lockf:
         fcntl.flock(lockf.fileno(), fcntl.LOCK_EX)
         try:
-            log.info("transition %d -> %d", n_old, m_new)
-            sfile.write_text(json.dumps({"current_profile": n_old, "transitioning": True}))
+            log.info("transition %d -> %d%s", n_old, m_new, " (dry-run)" if dry_run else "")
+            if not dry_run:
+                sfile.write_text(json.dumps({"current_profile": n_old, "transitioning": True}))
 
             snap_old = build_snapshot(driver, monitor_count=n_old, now_iso=now_iso)
             log.info("snapshot profile %d: %d windows", n_old, len(snap_old.windows))
-            write_snapshot(snap_old, snapshot_path(state_dir, n_old))
+            if not dry_run:
+                write_snapshot(snap_old, snapshot_path(state_dir, n_old))
 
             rules = cfg.profiles.get(m_new, [])
             log.info("applying %d rules for profile %d", len(rules), m_new)
@@ -48,6 +51,7 @@ def run_transition(
             else:
                 log.info("no snapshot for profile %d, skipping replay", m_new)
 
-            sfile.write_text(json.dumps({"current_profile": m_new, "transitioning": False}))
+            if not dry_run:
+                sfile.write_text(json.dumps({"current_profile": m_new, "transitioning": False}))
         finally:
             fcntl.flock(lockf.fileno(), fcntl.LOCK_UN)

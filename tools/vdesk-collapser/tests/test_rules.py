@@ -2,9 +2,9 @@ from vdesk_collapser.driver import FakeDriver
 from vdesk_collapser.models import Matcher, Rule
 from vdesk_collapser.rules import match_window, apply_rules
 
-SLACK = {"address": "0x1", "class": "Slack", "title": "Slack | foo", "initialClass": "Slack"}
-KITTY = {"address": "0x2", "class": "kitty", "title": "host - TMUX", "initialClass": "kitty"}
-FIREFOX = {"address": "0x3", "class": "firefox", "title": "github - Firefox", "initialClass": "firefox"}
+SLACK = {"address": "0x1", "class": "Slack", "title": "Slack | foo", "initialClass": "Slack", "workspace": {"id": 1}}
+KITTY = {"address": "0x2", "class": "kitty", "title": "host - TMUX", "initialClass": "kitty", "workspace": {"id": 3}}
+FIREFOX = {"address": "0x3", "class": "firefox", "title": "github - Firefox", "initialClass": "firefox", "workspace": {"id": 2}}
 
 def test_match_window_by_class():
     assert match_window(SLACK, Matcher(klass="Slack"))
@@ -50,3 +50,64 @@ def test_apply_rules_returns_addresses_touched():
     rules = [Rule(match=Matcher(klass="Slack"), target_vdesk=9)]
     touched = apply_rules(driver, rules)
     assert touched == {"0x1"}
+
+
+def _tmux(addr, ws_id):
+    return {"address": addr, "class": "kitty", "title": f"tmux-{addr} - TMUX",
+            "initialClass": "kitty", "workspace": {"id": ws_id}}
+
+
+def test_distribute_assigns_one_per_vdesk_sequentially():
+    clients = [_tmux("0xa", 5), _tmux("0xb", 2), _tmux("0xc", 8)]
+    w2v = {2: 2, 5: 5, 8: 8}
+    driver = FakeDriver(clients=clients, pinned=set(), workspace_to_vdesk=w2v)
+    rules = [Rule(match=Matcher(title_regex=r".* - TMUX$"), distribute=True)]
+    touched = apply_rules(driver, rules)
+    assert touched == {"0xa", "0xb", "0xc"}
+    moves = [(cmd, args) for cmd, args in driver.calls if cmd == "movetodesksilent"]
+    assert moves == [
+        ("movetodesksilent", "1,address:0xb"),
+        ("movetodesksilent", "2,address:0xa"),
+        ("movetodesksilent", "3,address:0xc"),
+    ]
+
+
+def test_distribute_extras_stack_on_last_vdesk():
+    clients = [_tmux("0xa", 1), _tmux("0xb", 2), _tmux("0xc", 3)]
+    w2v = {1: 1, 2: 2, 3: 3}
+    driver = FakeDriver(clients=clients, pinned=set(), workspace_to_vdesk=w2v)
+    rules = [Rule(match=Matcher(title_regex=r".* - TMUX$"), distribute=True)]
+    touched = apply_rules(driver, rules)
+    moves = [(cmd, args) for cmd, args in driver.calls if cmd == "movetodesksilent"]
+    assert moves == [
+        ("movetodesksilent", "1,address:0xa"),
+        ("movetodesksilent", "2,address:0xb"),
+        ("movetodesksilent", "3,address:0xc"),
+    ]
+
+
+def test_distribute_more_windows_than_vdesks():
+    clients = [_tmux("0xa", 1), _tmux("0xb", 2), _tmux("0xc", 3), _tmux("0xd", 4)]
+    w2v = {1: 1, 2: 2, 3: 3, 4: 3}
+    driver = FakeDriver(clients=clients, pinned=set(), workspace_to_vdesk=w2v)
+    rules = [Rule(match=Matcher(title_regex=r".* - TMUX$"), distribute=True)]
+    apply_rules(driver, rules)
+    moves = [(cmd, args) for cmd, args in driver.calls if cmd == "movetodesksilent"]
+    assert moves == [
+        ("movetodesksilent", "1,address:0xa"),
+        ("movetodesksilent", "2,address:0xb"),
+        ("movetodesksilent", "3,address:0xc"),
+        ("movetodesksilent", "3,address:0xd"),
+    ]
+
+
+def test_distribute_pin_overrides():
+    clients = [_tmux("0xa", 1), _tmux("0xb", 2)]
+    w2v = {1: 1, 2: 2}
+    driver = FakeDriver(clients=clients, pinned=set(), workspace_to_vdesk=w2v)
+    rules = [Rule(match=Matcher(title_regex=r".* - TMUX$"), distribute=True, pin=True)]
+    apply_rules(driver, rules)
+    moves = [(cmd, args) for cmd, args in driver.calls if cmd == "movetodesksilent"]
+    assert moves == []
+    pins = [(cmd, args) for cmd, args in driver.calls if cmd == "pinwindow"]
+    assert len(pins) == 2

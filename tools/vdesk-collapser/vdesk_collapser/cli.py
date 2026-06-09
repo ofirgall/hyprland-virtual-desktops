@@ -12,6 +12,8 @@ from vdesk_collapser.config import load_config
 from vdesk_collapser.daemon import run_daemon
 from vdesk_collapser.driver import Driver, HyprctlDriver
 from vdesk_collapser.models import Config
+from vdesk_collapser.rules import apply_rules
+from vdesk_collapser.snapshot import build_snapshot, snapshot_path, write_snapshot
 from vdesk_collapser.transition import run_transition
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -21,6 +23,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--once", action="store_true", help="run a single transition and exit")
     p.add_argument("--simulate", type=int, default=None,
                    help="pretend N monitors are connected (use with --once)")
+    p.add_argument("--reorder", action="store_true",
+                   help="apply rules for the current profile without transition")
+    p.add_argument("--snapshot", action="store_true",
+                   help="save current layout as a snapshot and exit")
     p.add_argument("--verbose", "-v", action="store_true")
     return p
 
@@ -31,6 +37,7 @@ log = logging.getLogger("vdesk-collapser")
 
 def run_once_with_simulated_count(
     driver: Driver, cfg: Config, simulated: int, state_dir: Path,
+    dry_run: bool = False,
 ) -> None:
     state_file = state_dir / "state.json"
     current: int | None = None
@@ -43,7 +50,7 @@ def run_once_with_simulated_count(
         current = len(driver.monitors())
     log.info("current_profile=%d, simulated=%d", current, simulated)
     run_transition(driver, cfg, n_old=current, m_new=simulated,
-                   state_dir=state_dir, now_iso=_now_iso())
+                   state_dir=state_dir, now_iso=_now_iso(), dry_run=dry_run)
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
@@ -70,12 +77,30 @@ def _run(args: argparse.Namespace) -> int:
     log.debug("state_dir=%s, dry_run=%s", state_dir, args.dry_run)
     driver: Driver = HyprctlDriver(dry_run=args.dry_run)
 
+    if args.reorder:
+        n = len(driver.monitors())
+        rules = cfg.profiles.get(n, [])
+        log.info("reorder: applying %d rules for profile %d", len(rules), n)
+        touched = apply_rules(driver, rules)
+        log.info("reorder: touched %d windows", len(touched))
+        return 0
+
+    if args.snapshot:
+        n = len(driver.monitors())
+        snap = build_snapshot(driver, monitor_count=n, now_iso=_now_iso())
+        path = snapshot_path(state_dir, n)
+        write_snapshot(snap, path)
+        state_file = state_dir / "state.json"
+        state_file.write_text(json.dumps({"current_profile": n, "transitioning": False}))
+        log.info("saved snapshot for profile %d (%d windows) to %s", n, len(snap.windows), path)
+        return 0
+
     if args.once:
         if args.simulate is None:
             print("--once requires --simulate N", file=sys.stderr)
             return 2
         log.debug("--once mode, simulate=%d", args.simulate)
-        run_once_with_simulated_count(driver, cfg, args.simulate, state_dir)
+        run_once_with_simulated_count(driver, cfg, args.simulate, state_dir, dry_run=args.dry_run)
         return 0
 
     if args.simulate is not None:

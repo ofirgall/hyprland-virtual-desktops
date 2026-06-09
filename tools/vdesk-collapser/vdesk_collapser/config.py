@@ -4,7 +4,7 @@ from pathlib import Path
 from vdesk_collapser.models import Config, Matcher, Rule
 
 _ALLOWED_MATCH = {"class", "title_regex", "initial_class"}
-_ALLOWED_RULE_TOP = {"match", "target_vdesk", "pin"}
+_ALLOWED_RULE_TOP = {"match", "target_vdesk", "pin", "distribute"}
 
 def load_config(path: Path) -> Config:
     if not path.exists():
@@ -29,6 +29,10 @@ def load_config(path: Path) -> Config:
             bad = set(match_raw) - _ALLOWED_MATCH
             if bad:
                 raise ValueError(f"unknown match field(s) in profile {n}: {bad}")
+            distribute = raw.get("distribute")
+            target_vdesk = raw.get("target_vdesk")
+            if distribute and target_vdesk is not None:
+                raise ValueError(f"profile {n}: distribute and target_vdesk are mutually exclusive")
             rules.append(
                 Rule(
                     match=Matcher(
@@ -36,8 +40,9 @@ def load_config(path: Path) -> Config:
                         title_regex=match_raw.get("title_regex"),
                         initial_class=match_raw.get("initial_class"),
                     ),
-                    target_vdesk=raw.get("target_vdesk"),
+                    target_vdesk=target_vdesk,
                     pin=raw.get("pin"),
+                    distribute=distribute,
                 )
             )
         cfg.profiles[n] = rules

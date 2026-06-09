@@ -8,8 +8,8 @@ existing `hyprctl` dispatchers — the plugin itself is untouched.
 ## Install
 
 ```bash
-cd tools/vdesk-collapser
-python -m pip install --user .
+# from repo root
+make install-collapser
 ```
 
 Then in `~/.config/hypr/hyprland.conf`:
@@ -32,10 +32,20 @@ match.class = "Slack"
 target_vdesk = 9
 pin = false
 
+# 1-monitor profile: distribute tmux windows one per vdesk.
+[[profile.1.rules]]
+match.title_regex = ".* - TMUX$"
+distribute = true
+
 # 3-monitor profile: keep Slack pinned across vdesks.
 [[profile.3.rules]]
 match.class = "Slack"
 pin = true
+
+# 3-monitor profile: distribute tmux windows one per vdesk.
+[[profile.3.rules]]
+match.title_regex = ".* - TMUX$"
+distribute = true
 ```
 
 Match fields (all optional, AND-ed):
@@ -46,6 +56,7 @@ Match fields (all optional, AND-ed):
 Action fields (omit a field to leave that aspect untouched):
 - `target_vdesk` — move window to this vdesk
 - `pin` — `true` to plugin-pin, `false` to unpin
+- `distribute` — `true` to spread matched windows one-per-vdesk sequentially (mutually exclusive with `target_vdesk`). Windows are sorted by current vdesk; extras stack on the last vdesk. If `pin = true` is also set, pin takes precedence.
 
 ## Usage
 
@@ -54,12 +65,16 @@ Action fields (omit a field to leave that aspect untouched):
 | `vdesk-collapser` | run daemon (intended for `exec-once`) |
 | `vdesk-collapser --once --simulate 1` | force a transition to the 1-monitor profile |
 | `vdesk-collapser --once --simulate 3` | force a transition to the 3-monitor profile |
+| `vdesk-collapser --reorder` | apply current profile's rules without transition |
+| `vdesk-collapser --snapshot` | save current layout as a snapshot and exit |
 | `vdesk-collapser --dry-run --once --simulate 1` | log intended dispatches, do nothing |
+| `vdesk-collapser --verbose ...` | enable debug logging |
 
-Bind a key for manual override:
+Bind keys for manual override:
 
 ```
 bind = SUPER SHIFT, M, exec, vdesk-collapser --once --simulate 1
+bind = SUPER SHIFT, N, exec, vdesk-collapser --reorder
 ```
 
 ## State

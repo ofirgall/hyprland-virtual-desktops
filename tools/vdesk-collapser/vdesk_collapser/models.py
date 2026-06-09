@@ -81,6 +81,7 @@ class Rule:
     match: Matcher
     target_vdesk: int | None = None
     pin: bool | None = None
+    distribute: bool | None = None
 
 @dataclass
 class Config:

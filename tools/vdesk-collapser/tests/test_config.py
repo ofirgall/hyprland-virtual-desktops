@@ -43,3 +43,16 @@ def test_load_config_rejects_unknown_match_field(tmp_path: Path):
     import pytest
     with pytest.raises(ValueError, match="unknown match field"):
         load_config(p)
+
+def test_load_config_parses_distribute(tmp_path: Path):
+    p = tmp_path / "c.toml"
+    p.write_text('[[profile.1.rules]]\nmatch.title_regex = ".* - TMUX$"\ndistribute = true\n')
+    cfg = load_config(p)
+    assert cfg.profiles[1][0].distribute is True
+
+def test_load_config_rejects_distribute_with_target_vdesk(tmp_path: Path):
+    p = tmp_path / "c.toml"
+    p.write_text('[[profile.1.rules]]\nmatch.class = "kitty"\ndistribute = true\ntarget_vdesk = 3\n')
+    import pytest
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        load_config(p)
