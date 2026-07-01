@@ -15,7 +15,7 @@ using namespace Hyprutils::Memory;
 
 typedef std::unordered_map<int, int> WorkspaceMap;
 // map with CMonitor* -> hyprland workspace id
-typedef std::unordered_map<const CSharedPointer<CMonitor>, WORKSPACEID> Layout;
+typedef std::unordered_map<const CSharedPointer<CMonitor>, WORKSPACEID> VDeskLayout;
 typedef std::string                                                     MonitorName;
 
 // implement `std::hash` for the CSharedPointer<Monitor> to work with `std::unordered_map`
@@ -39,10 +39,10 @@ class VirtualDesk {
     int                             id;
     std::string                     name;
     std::string                     status;
-    std::vector<Layout>             layouts;
+    std::vector<VDeskLayout>             layouts;
 
-    const Layout&                   activeLayout(const RememberLayoutConf&, const CSharedPointer<CMonitor>& exclude = nullptr);
-    Layout&                         searchActiveLayout(const RememberLayoutConf&, const CSharedPointer<CMonitor>& exclude = nullptr);
+    const VDeskLayout&                   activeLayout(const RememberLayoutConf&, const CSharedPointer<CMonitor>& exclude = nullptr);
+    VDeskLayout&                         searchActiveLayout(const RememberLayoutConf&, const CSharedPointer<CMonitor>& exclude = nullptr);
     std::unordered_set<std::string> setFromMonitors(const std::vector<CSharedPointer<CMonitor>>&);
     void                            changeWorkspaceOnMonitor(WORKSPACEID, const CSharedPointer<CMonitor>&);
     void                            invalidateActiveLayout();
@@ -56,8 +56,8 @@ class VirtualDesk {
   private:
     int                m_activeLayout_idx;
     bool               activeIsValid = false;
-    Layout             generateCurrentMonitorLayout();
+    VDeskLayout             generateCurrentMonitorLayout();
     static std::string monitorDesc(const CSharedPointer<CMonitor>&);
-    void               checkAndAdaptLayout(Layout*, const CSharedPointer<CMonitor>& exclude = nullptr);
+    void               checkAndAdaptLayout(VDeskLayout*, const CSharedPointer<CMonitor>& exclude = nullptr);
 };
 #endif

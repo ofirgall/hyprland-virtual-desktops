@@ -1,6 +1,7 @@
 #include "pinned_windows.hpp"
 #include "globals.hpp"
 #include "utils.hpp"
+#include <hyprland/src/helpers/Monitor.hpp>
 #include <algorithm>
 #include <format>
 #include <ranges>
