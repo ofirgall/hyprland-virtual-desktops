@@ -1,5 +1,7 @@
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
+#include <hyprland/src/config/ConfigValue.hpp>
+#include <hyprland/src/config/values/ConfigValues.hpp>
 #include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/helpers/MiscFunctions.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
@@ -144,9 +146,9 @@ SDispatchResult moveToNextDeskSilentDispatch(std::string arg) {
 }
 
 std::string printVDeskDispatch(eHyprCtlOutputFormat format, std::string arg) {
-    static auto* const PVDESKNAMESCONF = (Hyprlang::STRING const*)(HyprlandAPI::getConfigValue(PHANDLE, VIRTUALDESK_NAMES_CONF))->getDataStaticPtr();
+    static auto PVDESKNAMESCONF = CConfigValue<std::string>(VIRTUALDESK_NAMES_CONF);
 
-    auto               vdeskNamesConf = std::string{*PVDESKNAMESCONF};
+    auto        vdeskNamesConf = *PVDESKNAMESCONF;
     parseNamesConf(vdeskNamesConf);
 
     arg.erase(0, PRINTDESK_DISPATCH_STR.length());
@@ -501,13 +503,13 @@ void onMonitorAdded(const PHLMONITOR& monitor) {
 }
 
 void onConfigReloaded() {
-    static auto* const PNOTIFYINIT = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, NOTIFY_INIT)->getDataStaticPtr();
-    if (**PNOTIFYINIT && !notifiedInit) {
+    static auto PNOTIFYINIT = CConfigValue<Hyprlang::INT>(NOTIFY_INIT);
+    if (*PNOTIFYINIT && !notifiedInit) {
         HyprlandAPI::addNotification(PHANDLE, "Virtual desk Initialized successfully!", CHyprColor{0.f, 1.f, 1.f, 1.f}, 5000);
         notifiedInit = true;
     }
-    static auto* const PVDESKNAMESCONF = (Hyprlang::STRING const*)(HyprlandAPI::getConfigValue(PHANDLE, VIRTUALDESK_NAMES_CONF))->getDataStaticPtr();
-    auto               vdeskNamesConf  = std::string{*PVDESKNAMESCONF};
+    static auto PVDESKNAMESCONF = CConfigValue<std::string>(VIRTUALDESK_NAMES_CONF);
+    auto        vdeskNamesConf  = *PVDESKNAMESCONF;
     parseNamesConf(vdeskNamesConf);
     manager->loadLayoutConf();
 }
@@ -636,14 +638,17 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addDispatcherV2(PHANDLE, TOGGLEPINWINDOW_DISPATCH_STR, togglePinWindowDispatch);
 
     // Configs
-    HyprlandAPI::addConfigValue(PHANDLE, VIRTUALDESK_NAMES_CONF, Hyprlang::STRING{"unset"});
-    HyprlandAPI::addConfigValue(PHANDLE, CYCLEWORKSPACES_CONF, Hyprlang::INT{1});
-    HyprlandAPI::addConfigValue(PHANDLE, REMEMBER_LAYOUT_CONF, Hyprlang::STRING{REMEMBER_SIZE.c_str()});
-    HyprlandAPI::addConfigValue(PHANDLE, NOTIFY_INIT, Hyprlang::INT{1});
-    HyprlandAPI::addConfigValue(PHANDLE, VERBOSE_LOGS, Hyprlang::INT{0});
+    HyprlandAPI::addConfigValueV2(PHANDLE, makeShared<Config::Values::CStringValue>(VIRTUALDESK_NAMES_CONF.c_str(), "Virtual desktop names", "unset"));
+    HyprlandAPI::addConfigValueV2(PHANDLE, makeShared<Config::Values::CIntValue>(CYCLEWORKSPACES_CONF.c_str(), "Cycle workspaces when switching to the active vdesk", (int64_t)1));
+    HyprlandAPI::addConfigValueV2(PHANDLE, makeShared<Config::Values::CStringValue>(REMEMBER_LAYOUT_CONF.c_str(), "Remember layout strategy", REMEMBER_SIZE));
+    HyprlandAPI::addConfigValueV2(PHANDLE, makeShared<Config::Values::CIntValue>(NOTIFY_INIT.c_str(), "Show notification on plugin init", (int64_t)1));
+    HyprlandAPI::addConfigValueV2(PHANDLE, makeShared<Config::Values::CIntValue>(VERBOSE_LOGS.c_str(), "Enable verbose logging", (int64_t)0));
 
-    // Keywords
+    // Keywords (no V2 replacement available yet)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     HyprlandAPI::addConfigKeyword(PHANDLE, STICKY_RULES_KEYW, parseStickyRule, Hyprlang::SHandlerOptions{});
+#pragma GCC diagnostic pop
 
     onWorkspaceChangeHook   = Event::bus()->m_events.workspace.active.listen(onWorkspaceChange);
     onWindowOpenHook        = Event::bus()->m_events.window.open.listen(onWindowOpen);

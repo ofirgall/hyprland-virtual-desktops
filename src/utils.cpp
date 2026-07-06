@@ -1,5 +1,6 @@
 #include "utils.hpp"
 #include "globals.hpp"
+#include <hyprland/src/config/ConfigValue.hpp>
 
 void printLog(std::string s, Hyprutils::CLI::eLogLevel level) {
     // #ifdef DEBUG
@@ -55,8 +56,8 @@ bool isVerbose() {
     // this might happen if called before plugin is initalized
     if (!PHANDLE)
         return true;
-    static auto* const PVERBOSELOGS = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, VERBOSE_LOGS)->getDataStaticPtr();
-    return **PVERBOSELOGS;
+    static auto PVERBOSELOGS = CConfigValue<Hyprlang::INT>(VERBOSE_LOGS);
+    return *PVERBOSELOGS;
 }
 
 std::vector<CSharedPointer<CMonitor>> currentlyEnabledMonitors(const CSharedPointer<CMonitor>& exclude) {
